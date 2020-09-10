@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.Socket;
 
 import static java.lang.Integer.parseInt;
+import static java.util.Arrays.asList;
 
 public class Client {
 
@@ -20,7 +21,7 @@ public class Client {
                     Publisher.main(socket);
                     break;
                 case SUBSCRIBER:
-                    Subscriber.main(socket);
+                    Subscriber.main(socket, asList(args[3].split(",")));
                     break;
             }
         } catch (IOException e) {

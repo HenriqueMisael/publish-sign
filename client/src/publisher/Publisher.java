@@ -1,9 +1,11 @@
 package publisher;
 
-import java.io.DataInputStream;
+import javax.swing.*;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+
+import static javax.swing.JOptionPane.*;
 
 public class Publisher {
 
@@ -12,21 +14,33 @@ public class Publisher {
         publisher.start();
     }
 
-    private DataInputStream input;
-    private DataOutputStream output;
+    private final Socket socket;
 
     public Publisher(Socket socket) {
-        try {
-            input = new DataInputStream(socket.getInputStream());
-            output = new DataOutputStream(socket.getOutputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.socket = socket;
     }
 
     private void start() {
         try {
-            output.writeUTF("I am a publisher");
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            output.writeUTF("IAM:PUBLISHER");
+
+            boolean active = true;
+            do {
+                String subject = JOptionPane.showInputDialog("Digite o assunto do evento");
+                output.writeUTF("EVT:" + subject);
+
+                int option = JOptionPane.showConfirmDialog(null, "Deseja enviar outro evento?");
+                switch (option) {
+                    case YES_OPTION:
+                        continue;
+                    case CLOSED_OPTION:
+                    case NO_OPTION:
+                    default:
+                        active = false;
+                }
+            } while (active);
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
