@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.net.Socket;
 
 import static java.lang.Integer.parseInt;
-import static java.util.Arrays.asList;
 
 public class Client {
 
@@ -16,12 +15,14 @@ public class Client {
         int serverPort = parseInt(args[2]);
 
         try (Socket socket = new Socket(serverAddress, serverPort)) {
+
+            System.out.println("Connected");
             switch (clientType) {
                 case PUBLISHER:
                     Publisher.main(socket);
                     break;
                 case SUBSCRIBER:
-                    Subscriber.main(socket, asList(args[3].split(",")));
+                    Subscriber.main(socket);
                     break;
             }
         } catch (IOException e) {

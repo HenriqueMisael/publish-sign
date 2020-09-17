@@ -1,10 +1,12 @@
 package publisher;
 
-import java.io.BufferedReader;
+import util.ConsoleUI;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.Socket;
+
+import static java.util.Arrays.asList;
 
 public class Publisher {
 
@@ -24,29 +26,12 @@ public class Publisher {
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
             output.writeUTF("IAM:PUBLISHER");
 
-            BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-
             boolean active = true;
             do {
-                System.out.println("Digite o assunto do evento");
-                String subject = consoleReader.readLine();
+                String subject = ConsoleUI.inputString("Digite o assunto do evento");
                 output.writeUTF("EVT:" + subject);
 
-                System.out.println("Escolha uma ação:");
-                System.out.println("[1] Digitar novo evento");
-                System.out.println("[2] Sair");
-
-                Integer option = null;
-                do {
-                    try {
-                        String readed = consoleReader.readLine();
-                        option = Integer.parseInt(readed);
-                    } catch (NumberFormatException exception) {
-                        System.err.println("Digite um valor inteiro correspondente à opção desejada");
-                    }
-                } while (option == null);
-
-                switch (option) {
+                switch (ConsoleUI.menu("Escolha uma ação", asList("Digitar novo evento", "Sair"))) {
                     case 1:
                         continue;
                     case 2:

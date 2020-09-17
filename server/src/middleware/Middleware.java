@@ -13,8 +13,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static java.util.Arrays.asList;
-
 public class Middleware {
 
     private static int CONNECTIONS_LIMIT = Integer.MAX_VALUE;
@@ -38,6 +36,7 @@ public class Middleware {
             Thread.sleep(1000);
         }
         while (!publishers.isEmpty()) {
+            subscribers.forEach(Subscriber::checkSubscriptionsUpdate);
             checkForEvents();
             System.out.println("Waiting " + TIME_FOR_EACH_LOOP / 1000 + " seconds for next checking");
             Thread.sleep(TIME_FOR_EACH_LOOP);
@@ -105,8 +104,7 @@ public class Middleware {
 
                 switch (clientType) {
                     case SUBSCRIBER:
-                        Set<String> subscriptions = new HashSet<>(asList(iamArray[2].split(",")));
-                        subscribers.add(new Subscriber(socketClient, subscriptions));
+                        subscribers.add(new Subscriber(socketClient));
                         break;
 
                     case PUBLISHER:
