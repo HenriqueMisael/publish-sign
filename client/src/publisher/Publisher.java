@@ -1,11 +1,10 @@
 package publisher;
 
-import javax.swing.*;
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Socket;
-
-import static javax.swing.JOptionPane.*;
 
 public class Publisher {
 
@@ -25,17 +24,32 @@ public class Publisher {
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
             output.writeUTF("IAM:PUBLISHER");
 
+            BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
+
             boolean active = true;
             do {
-                String subject = JOptionPane.showInputDialog("Digite o assunto do evento");
+                System.out.println("Digite o assunto do evento");
+                String subject = consoleReader.readLine();
                 output.writeUTF("EVT:" + subject);
 
-                int option = JOptionPane.showConfirmDialog(null, "Deseja enviar outro evento?");
+                System.out.println("Escolha uma ação:");
+                System.out.println("[1] Digitar novo evento");
+                System.out.println("[2] Sair");
+
+                Integer option = null;
+                do {
+                    try {
+                        String readed = consoleReader.readLine();
+                        option = Integer.parseInt(readed);
+                    } catch (NumberFormatException exception) {
+                        System.err.println("Digite um valor inteiro correspondente à opção desejada");
+                    }
+                } while (option == null);
+
                 switch (option) {
-                    case YES_OPTION:
+                    case 1:
                         continue;
-                    case CLOSED_OPTION:
-                    case NO_OPTION:
+                    case 2:
                     default:
                         active = false;
                 }
