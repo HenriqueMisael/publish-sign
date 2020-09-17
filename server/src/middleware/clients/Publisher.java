@@ -4,6 +4,8 @@ import middleware.Event;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Publisher extends Client {
 
@@ -30,12 +32,15 @@ public class Publisher extends Client {
         }
     }
 
-    public Event checkForEvent() {
-        if (!hasNewEvent())
-            return null;
+    public Set<Event> checkForEvents() {
 
-        String message = getMessage();
+        Set<Event> events = new HashSet<>();
 
-        return Event.fromMessage(message);
+        while (hasNewEvent()) {
+            String message = getMessage();
+            events.add(Event.fromMessage(message));
+        }
+
+        return events;
     }
 }

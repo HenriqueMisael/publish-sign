@@ -10,7 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -19,6 +18,7 @@ import static java.util.Arrays.asList;
 public class Middleware {
 
     private static int CONNECTIONS_LIMIT = Integer.MAX_VALUE;
+    private static int TIME_FOR_EACH_LOOP = 10000;
     private final ServerSocket serverSocket;
     private final Set<Publisher> publishers;
     private final Set<Subscriber> subscribers;
@@ -39,8 +39,8 @@ public class Middleware {
         }
         while (!publishers.isEmpty()) {
             checkForEvents();
-            System.out.println("Waiting 5 seconds for next checking");
-            Thread.sleep(5000);
+            System.out.println("Waiting " + TIME_FOR_EACH_LOOP / 1000 + " seconds for next checking");
+            Thread.sleep(TIME_FOR_EACH_LOOP);
             System.out.println();
 
             // Remove conexões inativas com os publicadores
@@ -71,8 +71,7 @@ public class Middleware {
         System.out.println("Checking for new events");
 
         Set<Event> events = publishers.stream()
-                .map(Publisher::checkForEvent)
-                .filter(Objects::nonNull)
+                .flatMap(publisher -> publisher.checkForEvents().stream())
                 .collect(Collectors.toSet());
 
         if (!events.isEmpty()) {
