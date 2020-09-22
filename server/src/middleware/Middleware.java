@@ -5,27 +5,43 @@ import middleware.clients.Publisher;
 import middleware.clients.Subscriber;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Middleware {
 
-    private static int CONNECTIONS_LIMIT = Integer.MAX_VALUE;
-    private static int TIME_FOR_EACH_LOOP = 10000;
+    private static final int CONNECTIONS_LIMIT = Integer.MAX_VALUE;
+    private static final int TIME_FOR_EACH_LOOP = 10000;
     private final ServerSocket serverSocket;
     private final Set<Publisher> publishers;
     private final Set<Subscriber> subscribers;
+    private final Set<Socket> otherServers;
 
-    public Middleware(ServerSocket serverSocket) {
+    public Middleware(ServerSocket serverSocket, Set<Socket> otherServers) {
         this.serverSocket = serverSocket;
+        this.otherServers = otherServers;
 
         publishers = new HashSet<>();
         subscribers = new HashSet<>();
+
+        otherServers.forEach(socket -> {
+            try {
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                output.writeUTF("IAM:MIDDLEWARE");
+                subscribers.add(new Subscriber(socket));
+                publishers.add(new Publisher(socket));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void start() throws InterruptedException {
@@ -36,7 +52,8 @@ public class Middleware {
             Thread.sleep(1000);
         }
         while (!publishers.isEmpty()) {
-            subscribers.forEach(Subscriber::checkSubscriptionsUpdate);
+            checkForSubscriptionsUpdate();
+
             checkForEvents();
             System.out.println("Waiting " + TIME_FOR_EACH_LOOP / 1000 + " seconds for next checking");
             Thread.sleep(TIME_FOR_EACH_LOOP);
@@ -48,6 +65,33 @@ public class Middleware {
             subscribers.removeAll(subscribers.stream().filter(publisher -> !publisher.isActive()).collect(Collectors.toSet()));
         }
         close();
+    }
+
+    private void checkForSubscriptionsUpdate() {
+
+        List<String> subscriptions = subscribers.stream().flatMap(subscriber -> subscriber.subscriptions.stream()).collect(Collectors.toList());
+
+        Set<Map.Entry<String, Boolean>> subscriptionsUpdate = subscribers.stream().flatMap(Subscriber::checkSubscriptionsUpdate).filter(update -> !subscriptions.contains(update.getKey())).collect(Collectors.toSet());
+
+        subscriptionsUpdate.forEach(entry -> {
+
+            StringBuilder update = new StringBuilder();
+            if (entry.getValue()) {
+                update.append("SUB");
+            } else {
+                update.append("UNSUB");
+            }
+            update.append(":").append(entry.getKey());
+
+            this.otherServers.forEach(socket -> {
+                try {
+                    DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                    output.writeUTF(update.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+        });
     }
 
     private void close() {
@@ -109,6 +153,11 @@ public class Middleware {
 
                     case PUBLISHER:
                         publishers.add(new Publisher(socketClient));
+                        break;
+                    case MIDDLEWARE:
+                        publishers.add(new Publisher(socketClient));
+                        subscribers.add(new Subscriber(socketClient));
+                        otherServers.add(socketClient);
                         break;
                 }
             } catch (SocketException e) {
