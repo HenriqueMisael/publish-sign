@@ -1,8 +1,6 @@
 package middleware;
 
-import middleware.clients.ClientType;
-import middleware.clients.Publisher;
-import middleware.clients.Subscriber;
+import middleware.clients.*;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -11,35 +9,46 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class Middleware {
 
     private static final int CONNECTIONS_LIMIT = Integer.MAX_VALUE;
-    private static final int TIME_FOR_EACH_LOOP = 10000;
+    private static final int TIME_FOR_EACH_LOOP = 20000;
     private final ServerSocket serverSocket;
     private final Set<Publisher> publishers;
     private final Set<Subscriber> subscribers;
-    private final Set<Socket> otherServers;
+    private final Set<ServerNode> otherServers;
 
     public Middleware(ServerSocket serverSocket, Set<Socket> otherServers) {
         this.serverSocket = serverSocket;
-        this.otherServers = otherServers;
+        this.publishers = new HashSet<>();
+        this.subscribers = new HashSet<>();
+        this.otherServers = otherServers
+                .stream()
+                .map(this::addNewServer)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
 
-        publishers = new HashSet<>();
-        subscribers = new HashSet<>();
+    private ServerNode addNewServer(Socket socket) {
+        ServerNode serverNode = null;
 
-        otherServers.forEach(socket -> {
-            try {
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-                output.writeUTF("IAM:MIDDLEWARE");
-                subscribers.add(new Subscriber(socket));
-                publishers.add(new Publisher(socket));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+        try {
+            serverNode = new ServerNode(socket);
+
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            output.writeUTF("IAM:MIDDLEWARE");
+
+            subscribers.add(serverNode);
+            publishers.add(serverNode);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return serverNode;
     }
 
     public void start() throws InterruptedException {
@@ -56,32 +65,15 @@ public class Middleware {
             System.out.println("Waiting " + TIME_FOR_EACH_LOOP / 1000 + " seconds for next checking");
             Thread.sleep(TIME_FOR_EACH_LOOP);
             System.out.println();
-
-            // Remove conexões inativas com os publicadores
-            publishers.removeAll(publishers.stream().filter(publisher -> !publisher.isActive()).collect(Collectors.toSet()));
-            // Remove conexões inativas com os subscritores
-            subscribers.removeAll(subscribers.stream().filter(publisher -> !publisher.isActive()).collect(Collectors.toSet()));
         }
         close();
     }
 
     private void checkForSubscriptionsUpdate() {
         subscribers.forEach(subscriber -> subscriber.checkSubscriptionsUpdate().forEach(entry ->
-                this.otherServers.stream().filter(otherServer -> otherServer != subscriber.socket).forEach(otherServer -> {
+                this.otherServers.stream().filter(serverNode -> serverNode.equals(subscriber)).forEach(serverNode -> {
 
-                    StringBuilder update = new StringBuilder();
-                    if (entry.getValue()) {
-                        update.append("SUB");
-                    } else {
-                        update.append("UNSUB");
-                    }
-                    update.append(":").append(entry.getKey());
-                    try {
-                        DataOutputStream output = new DataOutputStream(otherServer.getOutputStream());
-                        output.writeUTF(update.toString());
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    serverNode.updateSubscription(entry);
                 })
         ));
     }
@@ -105,26 +97,20 @@ public class Middleware {
     private void checkForEvents() {
         System.out.println("Checking for new events");
 
-        Set<Event> events = publishers.stream()
-                .flatMap(publisher -> publisher.checkForEvents().stream())
-                .collect(Collectors.toSet());
+        publishers.forEach(publisher -> {
+            Set<Event> events = publisher.checkForEvents();
 
-        if (!events.isEmpty()) {
-            events.forEach(this::sendEvent);
-        }
+            if (events.isEmpty())
+                return;
+
+            System.out.println("Events received: " + events.stream().map(event -> event.subject).collect(Collectors.joining(", ")));
+            this.subscribers
+                    .stream()
+                    .filter(subscriber -> !publisher.equals(subscriber))
+                    .forEach(subscriber -> events.forEach(subscriber::send));
+        });
 
         System.out.println("Events checkout finished");
-    }
-
-    private void sendEvent(Event event) {
-
-        System.out.println("Processing event " + event.subject);
-
-        Set<Subscriber> subscribers = this.subscribers.stream()
-                .filter(subscriber -> subscriber.subscriptions.contains(event.subject))
-                .collect(Collectors.toSet());
-
-        subscribers.forEach(subscriber -> subscriber.send(event));
     }
 
     private void checkForNewConnections() {
@@ -140,16 +126,14 @@ public class Middleware {
 
                 switch (clientType) {
                     case SUBSCRIBER:
-                        subscribers.add(new Subscriber(socketClient));
+                        subscribers.add(new SubscriberImpl(socketClient));
                         break;
 
                     case PUBLISHER:
-                        publishers.add(new Publisher(socketClient));
+                        publishers.add(new PublisherImpl(socketClient));
                         break;
                     case MIDDLEWARE:
-                        publishers.add(new Publisher(socketClient));
-                        subscribers.add(new Subscriber(socketClient));
-                        otherServers.add(socketClient);
+                        otherServers.add(addNewServer(socketClient));
                         break;
                 }
             } catch (SocketException e) {
