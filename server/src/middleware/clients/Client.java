@@ -7,7 +7,7 @@ import java.net.Socket;
 
 public class Client {
 
-    protected final Socket socket;
+    public final Socket socket;
     protected final DataInputStream inputStream;
     protected final DataOutputStream outputStream;
 

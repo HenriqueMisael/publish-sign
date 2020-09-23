@@ -11,8 +11,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -68,30 +66,24 @@ public class Middleware {
     }
 
     private void checkForSubscriptionsUpdate() {
+        subscribers.forEach(subscriber -> subscriber.checkSubscriptionsUpdate().forEach(entry ->
+                this.otherServers.stream().filter(otherServer -> otherServer != subscriber.socket).forEach(otherServer -> {
 
-        List<String> subscriptions = subscribers.stream().flatMap(subscriber -> subscriber.subscriptions.stream()).collect(Collectors.toList());
-
-        Set<Map.Entry<String, Boolean>> subscriptionsUpdate = subscribers.stream().flatMap(Subscriber::checkSubscriptionsUpdate).filter(update -> !subscriptions.contains(update.getKey())).collect(Collectors.toSet());
-
-        subscriptionsUpdate.forEach(entry -> {
-
-            StringBuilder update = new StringBuilder();
-            if (entry.getValue()) {
-                update.append("SUB");
-            } else {
-                update.append("UNSUB");
-            }
-            update.append(":").append(entry.getKey());
-
-            this.otherServers.forEach(socket -> {
-                try {
-                    DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-                    output.writeUTF(update.toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-        });
+                    StringBuilder update = new StringBuilder();
+                    if (entry.getValue()) {
+                        update.append("SUB");
+                    } else {
+                        update.append("UNSUB");
+                    }
+                    update.append(":").append(entry.getKey());
+                    try {
+                        DataOutputStream output = new DataOutputStream(otherServer.getOutputStream());
+                        output.writeUTF(update.toString());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                })
+        ));
     }
 
     private void close() {
