@@ -11,18 +11,19 @@ public class Client {
     public static void main(String... args) {
         ClientType clientType = ClientType.valueOf(args[0]);
 
-        String serverAddress = args[1];
-        int serverPort = parseInt(args[2]);
+        String name = args[1];
+        String serverAddress = args[2];
+        int serverPort = parseInt(args[3]);
 
         try (Socket socket = new Socket(serverAddress, serverPort)) {
 
             System.out.println("Connected");
             switch (clientType) {
                 case PUBLISHER:
-                    Publisher.main(socket);
+                    Publisher.main(name, socket);
                     break;
                 case SUBSCRIBER:
-                    Subscriber.main(socket);
+                    Subscriber.main(name, socket);
                     break;
             }
         } catch (IOException e) {

@@ -15,14 +15,16 @@ public class Subscriber {
     private final DataOutputStream output;
     private final List<String> subscribedSubjects;
 
-    public static void main(Socket socket) throws IOException {
-        Subscriber subscriber = new Subscriber(socket);
+    public static void main(String name, Socket socket) throws IOException {
+        Subscriber subscriber = new Subscriber(name, socket);
         subscriber.start();
     }
 
     private final Socket socket;
+    private final String name;
 
-    public Subscriber(Socket socket) throws IOException {
+    public Subscriber(String name, Socket socket) throws IOException {
+        this.name = name;
         this.socket = socket;
         output = new DataOutputStream(this.socket.getOutputStream());
         subscribedSubjects = new ArrayList<>();
@@ -30,7 +32,7 @@ public class Subscriber {
 
     private void start() {
         try {
-            output.writeUTF("IAM:SUBSCRIBER");
+            output.writeUTF("IAM:SUBSCRIBER:" + this.name);
 
             DataInputStream input = new DataInputStream(socket.getInputStream());
             boolean active = true;
@@ -58,7 +60,8 @@ public class Subscriber {
                     case 3:
                         while (input.available() > 0) {
                             String message = input.readUTF();
-                            System.out.println("Event arrived: " + message.split(":")[1]);
+                            String[] response = message.split(":");
+                            System.out.println("Event arrived: " + response[1] + "\t" + response[2]);
                         }
                         break;
                     default:

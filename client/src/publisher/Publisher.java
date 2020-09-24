@@ -10,26 +10,31 @@ import static java.util.Arrays.asList;
 
 public class Publisher {
 
-    public static void main(Socket socket) {
-        Publisher publisher = new Publisher(socket);
+    public static void main(String name, Socket socket) {
+        Publisher publisher = new Publisher(name, socket);
         publisher.start();
     }
 
+    private final String name;
     private final Socket socket;
+    private Long nextEventID;
 
-    public Publisher(Socket socket) {
+    public Publisher(String name, Socket socket) {
+        this.name = name;
         this.socket = socket;
+
+        this.nextEventID = 1L;
     }
 
     private void start() {
         try {
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            output.writeUTF("IAM:PUBLISHER");
+            output.writeUTF("IAM:PUBLISHER:" + this.name);
 
             boolean active = true;
             do {
                 String subject = ConsoleUI.inputString("Digite o assunto do evento");
-                output.writeUTF("EVT:" + subject);
+                output.writeUTF("EVT:" + this.name + this.nextEventID++ + ":" + subject);
 
                 switch (ConsoleUI.menu("Escolha uma ação", asList("Digitar novo evento", "Sair"))) {
                     case 1:
