@@ -13,14 +13,16 @@ import java.util.stream.Stream;
 public class SubscriberImpl extends Client implements Subscriber {
 
     private final Set<String> subscriptions;
+    private final String name;
 
     @Override
     public Set<String> getSubscriptions() {
         return subscriptions;
     }
 
-    public SubscriberImpl(Socket socket) throws IOException {
+    public SubscriberImpl(Socket socket, String name) throws IOException {
         super(socket);
+        this.name = name;
         subscriptions = new HashSet<>();
     }
 
@@ -58,5 +60,10 @@ public class SubscriberImpl extends Client implements Subscriber {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public String toString() {
+        return this.name;
     }
 }

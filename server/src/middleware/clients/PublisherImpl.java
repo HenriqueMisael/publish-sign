@@ -9,8 +9,11 @@ import java.util.Set;
 
 public class PublisherImpl extends Client implements Publisher {
 
-    public PublisherImpl(Socket socket) throws IOException {
+    private final String name;
+
+    public PublisherImpl(Socket socket, String name) throws IOException {
         super(socket);
+        this.name = name;
     }
 
     private boolean hasNewEvent() {
@@ -43,5 +46,10 @@ public class PublisherImpl extends Client implements Publisher {
         }
 
         return events;
+    }
+
+    @Override
+    public String toString() {
+        return this.name;
     }
 }

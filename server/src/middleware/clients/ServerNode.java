@@ -17,9 +17,11 @@ public class ServerNode extends Client implements Publisher, Subscriber {
     private final Map<String, Boolean> subscriptionsUpdates;
     private final Set<Event> newEvents;
     private final Set<String> oldEventIDs;
+    private final String name;
 
-    public ServerNode(Socket socket) throws IOException {
+    public ServerNode(Socket socket, String name) throws IOException {
         super(socket);
+        this.name = name;
         subscriptionsUpdates = new HashMap<>();
         subscriptions = new HashSet<>();
         newEvents = new HashSet<>();
@@ -62,6 +64,17 @@ public class ServerNode extends Client implements Publisher, Subscriber {
         checkForNewInputs();
         Set<Map.Entry<String, Boolean>> copy = new HashSet<>(subscriptionsUpdates.entrySet());
         subscriptionsUpdates.clear();
+
+        copy.forEach(update -> {
+            String subject = update.getKey();
+            boolean isNew = update.getValue();
+            if (isNew) {
+                this.subscriptions.add(subject);
+            } else {
+                this.subscriptions.remove(subject);
+            }
+        });
+
         return copy.stream();
     }
 
@@ -114,5 +127,10 @@ public class ServerNode extends Client implements Publisher, Subscriber {
         }
         update.append(":").append(entry.getKey());
         send(update.toString());
+    }
+
+    @Override
+    public String toString() {
+        return this.name;
     }
 }

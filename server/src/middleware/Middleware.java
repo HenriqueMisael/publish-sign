@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -21,26 +22,29 @@ public class Middleware {
     private final Set<Publisher> publishers;
     private final Set<Subscriber> subscribers;
     private final Set<ServerNode> otherServers;
+    private final String name;
 
-    public Middleware(ServerSocket serverSocket, Set<Socket> otherServers) {
+    public Middleware(ServerSocket serverSocket, HashMap<String, Socket> otherServers, String name) {
         this.serverSocket = serverSocket;
+        this.name = name;
         this.publishers = new HashSet<>();
         this.subscribers = new HashSet<>();
         this.otherServers = otherServers
+                .entrySet()
                 .stream()
-                .map(this::addNewServer)
+                .map(stringSocketEntry -> addNewServer(stringSocketEntry.getValue(), stringSocketEntry.getKey()))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
 
-    private ServerNode addNewServer(Socket socket) {
+    private ServerNode addNewServer(Socket socket, String name) {
         ServerNode serverNode = null;
 
         try {
-            serverNode = new ServerNode(socket);
+            serverNode = new ServerNode(socket, name);
 
             DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-            output.writeUTF("IAM:MIDDLEWARE");
+            output.writeUTF("IAM:MIDDLEWARE:" + this.name);
 
             subscribers.add(serverNode);
             publishers.add(serverNode);
@@ -124,19 +128,20 @@ public class Middleware {
                 String iam = inputStream.readUTF();
                 String[] iamArray = iam.split(":");
                 ClientType clientType = ClientType.valueOf(iamArray[1]);
+                String name = iamArray[2];
 
                 System.out.println("Found client " + clientType.toString());
 
                 switch (clientType) {
                     case SUBSCRIBER:
-                        subscribers.add(new SubscriberImpl(socketClient));
+                        subscribers.add(new SubscriberImpl(socketClient, name));
                         break;
 
                     case PUBLISHER:
-                        publishers.add(new PublisherImpl(socketClient));
+                        publishers.add(new PublisherImpl(socketClient, name));
                         break;
                     case MIDDLEWARE:
-                        otherServers.add(addNewServer(socketClient));
+                        otherServers.add(addNewServer(socketClient, name));
                         break;
                 }
             } catch (SocketException e) {

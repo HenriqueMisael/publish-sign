@@ -15,7 +15,7 @@ public class Server {
 
     public static void main(String... args) {
         int serverPort = parseInt(args[0]);
-        Set<Socket> otherServers = args.length < 2 ? new HashSet() : Arrays.stream(args[1].split(",")).map(s -> s.split(":")).map((String[] addressPort) -> {
+        Set<Socket> otherServers = args.length < 3 ? new HashSet<>() : Arrays.stream(args[2].split(",")).map(s -> s.split(":")).map((String[] addressPort) -> {
             String address = addressPort[0];
             int port = parseInt(addressPort[1]);
 
@@ -28,7 +28,7 @@ public class Server {
         }).filter(Objects::nonNull).collect(Collectors.toSet());
 
         try (ServerSocket serverSocket = new ServerSocket(serverPort)) {
-            Middleware middleware = new Middleware(serverSocket, otherServers);
+            Middleware middleware = new Middleware(serverSocket, otherServers, args[1]);
             middleware.start();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
