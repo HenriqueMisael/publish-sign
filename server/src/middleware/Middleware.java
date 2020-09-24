@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -24,17 +23,21 @@ public class Middleware {
     private final Set<ServerNode> otherServers;
     private final String name;
 
-    public Middleware(ServerSocket serverSocket, HashMap<String, Socket> otherServers, String name) {
+    public Middleware(ServerSocket serverSocket, Set<Socket> otherServers, String name) {
         this.serverSocket = serverSocket;
         this.name = name;
         this.publishers = new HashSet<>();
         this.subscribers = new HashSet<>();
         this.otherServers = otherServers
-                .entrySet()
                 .stream()
-                .map(stringSocketEntry -> addNewServer(stringSocketEntry.getValue(), stringSocketEntry.getKey()))
+                .map(this::addNewServer)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+    }
+
+    private ServerNode addNewServer(Socket socket) {
+        String name = socket.toString();
+        return addNewServer(socket, name);
     }
 
     private ServerNode addNewServer(Socket socket, String name) {
@@ -75,7 +78,7 @@ public class Middleware {
 
     private void checkForSubscriptionsUpdate() {
         subscribers.forEach(subscriber -> subscriber.checkSubscriptionsUpdate().forEach(entry ->
-                this.otherServers.stream().filter(serverNode -> serverNode.equals(subscriber)).forEach(serverNode -> {
+                this.otherServers.stream().filter(serverNode -> !serverNode.equals(subscriber)).forEach(serverNode -> {
 
                     serverNode.updateSubscription(entry);
                 })
@@ -107,13 +110,21 @@ public class Middleware {
             if (events.isEmpty())
                 return;
 
-            System.out.println("Events received: " + events.stream().map(event -> event.subject).collect(Collectors.joining(", ")));
+            System.out.println("Events received from " + publisher + ": " + events
+                    .stream()
+                    .map(event -> event.subject)
+                    .collect(Collectors.joining(", ")));
             this.subscribers
                     .stream()
                     .filter(subscriber -> !publisher.equals(subscriber))
                     .forEach(subscriber -> events.forEach(event -> {
-                        if (subscriber.getSubscriptions().contains(event.subject))
+                        System.out.println("Spreading " + event.subject);
+                        if (subscriber.getSubscriptions().contains(event.subject)) {
+                            System.out.println("Sending to " + subscriber);
                             subscriber.send(event);
+                        } else {
+                            System.out.println("Ignoring " + subscriber + " unsubscribed");
+                        }
                     }));
         });
 

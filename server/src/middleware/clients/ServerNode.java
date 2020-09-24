@@ -69,8 +69,10 @@ public class ServerNode extends Client implements Publisher, Subscriber {
             String subject = update.getKey();
             boolean isNew = update.getValue();
             if (isNew) {
+                System.out.println(this.name + " new subscription: " + subject);
                 this.subscriptions.add(subject);
             } else {
+                System.out.println(this.name + " unsubscription: " + subject);
                 this.subscriptions.remove(subject);
             }
         });

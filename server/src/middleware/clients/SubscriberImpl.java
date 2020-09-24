@@ -36,12 +36,12 @@ public class SubscriberImpl extends Client implements Subscriber {
                 String subject = request[1];
                 switch (request[0]) {
                     case "SUB":
-                        System.out.println("New subscription: " + subject);
+                        System.out.println(this.name + " new subscription: " + subject);
                         subscriptions.add(subject);
                         subscriptionsUpdates.put(subject, true);
                         break;
                     case "UNSUB":
-                        System.out.println("Unsubscription: " + subject);
+                        System.out.println(this.name + " unsubscription: " + subject);
                         subscriptions.remove(subject);
                         subscriptionsUpdates.put(subject, false);
                         break;
