@@ -107,7 +107,10 @@ public class Middleware {
             this.subscribers
                     .stream()
                     .filter(subscriber -> !publisher.equals(subscriber))
-                    .forEach(subscriber -> events.forEach(subscriber::send));
+                    .forEach(subscriber -> events.forEach(event -> {
+                        if (subscriber.getSubscriptions().contains(event.subject))
+                            subscriber.send(event);
+                    }));
         });
 
         System.out.println("Events checkout finished");
