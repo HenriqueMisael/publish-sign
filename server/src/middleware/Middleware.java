@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class Middleware {
 
     private static final int CONNECTIONS_LIMIT = Integer.MAX_VALUE;
-    private static final int TIME_FOR_EACH_LOOP = 20000;
+    private static final int TIME_FOR_EACH_LOOP = 1000;
     private final ServerSocket serverSocket;
     private final Set<Publisher> publishers;
     private final Set<Subscriber> subscribers;
@@ -71,7 +71,7 @@ public class Middleware {
             checkForEvents();
             System.out.println("Waiting " + TIME_FOR_EACH_LOOP / 1000 + " seconds for next checking");
             Thread.sleep(TIME_FOR_EACH_LOOP);
-            System.out.println();
+            //            System.out.println();
         }
         close();
     }
@@ -102,7 +102,7 @@ public class Middleware {
     }
 
     private void checkForEvents() {
-        System.out.println("Checking for new events");
+        //        System.out.println("Checking for new events");
 
         publishers.forEach(publisher -> {
             Set<Event> events = publisher.checkForEvents();
@@ -118,17 +118,16 @@ public class Middleware {
                     .stream()
                     .filter(subscriber -> !publisher.equals(subscriber))
                     .forEach(subscriber -> events.forEach(event -> {
-                        System.out.println("Spreading " + event.subject);
+                        //                        System.out.println("Spreading " + event.subject);
                         if (subscriber.getSubscriptions().contains(event.subject)) {
                             System.out.println("Sending to " + subscriber);
                             subscriber.send(event);
-                        } else {
-                            System.out.println("Ignoring " + subscriber + " unsubscribed");
+                            //                            System.out.println("Ignoring " + subscriber + " unsubscribed");
                         }
                     }));
         });
 
-        System.out.println("Events checkout finished");
+        //        System.out.println("Events checkout finished");
     }
 
     private void checkForNewConnections() {
